@@ -1,0 +1,10 @@
+*.a
+*.dylib
+*.o
+*.so
+*~
+Makefile
+config.*
+configure.lineno
+pkgIndex.tcl
+tdomConfig.sh

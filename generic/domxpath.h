@@ -2,7 +2,7 @@
 |   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
 |
-|   $Id: domxpath.h,v 1.21 2007/08/05 01:15:59 rolf Exp $
+|   $Id: domxpath.h,v 1.22 2007/08/18 00:33:12 rolf Exp $
 |
 | 
 |   A (partial) XPath implementation (lexer/parser/evaluator) for tDOM, 
@@ -203,7 +203,7 @@ char * xpathNodeToXPath  (domNode *node);
 void rsSetBool      ( xpathResultSet *rs, int          i    );
 void rsSetInt       ( xpathResultSet *rs, int          i    );
 void rsSetReal      ( xpathResultSet *rs, double       d    );
-void rsSetString    ( xpathResultSet *rs, char        *s    );
+void rsSetString    ( xpathResultSet *rs, const char  *s    );
 void rsAddNode      ( xpathResultSet *rs, domNode     *node );
 void rsAddNodeFast  ( xpathResultSet *rs, domNode     *node );
 void rsCopy         ( xpathResultSet *to, xpathResultSet *from );

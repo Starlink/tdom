@@ -2,7 +2,7 @@
 #   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
 #----------------------------------------------------------------------------
 #
-#   $Id: tdom.tcl,v 1.19 2005/01/11 15:57:19 rolf Exp $
+#   $Id: tdom.tcl,v 1.20 2008/05/24 21:59:58 rolf Exp $
 #
 #
 #   The higher level functions of tDOM written in plain Tcl.
@@ -539,20 +539,33 @@ proc ::dom::xpathFunc::element-available { ctxNode pos
     }
     foreach { arg1Typ arg1Value } $args break
     set str [::dom::xpathFuncHelper::coerce2string $arg1Typ $arg1Value ]
+    # The XSLT recommendation says: "The element-available
+    # function returns true if and only if the expanded-name
+    # is the name of an instruction." The following xsl
+    # elements are not in the category instruction.
+    # xsl:attribute-set 
+    # xsl:decimal-format 
+    # xsl:include
+    # xsl:key 
+    # xsl:namespace-alias
+    # xsl:output
+    # xsl:param
+    # xsl:strip-space
+    # xsl:preserve-space
+    # xsl:template
+    # xsl:import
+    # xsl:otherwise
+    # xsl:sort
+    # xsl:stylesheet
+    # xsl:transform
+    # xsl:with-param
+    # xsl:when
     switch $str {
-        xsl:stylesheet -
-        xsl:transform -
-        xsl:include -
-        xsl:import -
-        xsl:strip-space -
-        xsl:preserve-space -
-        xsl:template -
         xsl:apply-templates -
         xsl:apply-imports -
         xsl:call-template -
         xsl:element -
         xsl:attribute -
-        xsl:attribute-set -
         xsl:text -
         xsl:processing-instruction -
         xsl:comment -
@@ -562,18 +575,9 @@ proc ::dom::xpathFunc::element-available { ctxNode pos
         xsl:for-each -
         xsl:if -
         xsl:choose -
-        xsl:when -
-        xsl:otherwise -
-        xsl:sort -
         xsl:variable -
-        xsl:param -
         xsl:copy-of -
-        xsl:with-param -
-        xsl:key -
         xsl:message -
-        xsl:decimal-format -
-        xsl:namespace-alias -
-        xsl:output -
         xsl:fallback {
             return [list bool true]
         }

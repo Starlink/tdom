@@ -2,7 +2,7 @@
 |   Copyright (C) 1999-2000  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
 |
-|   $Id: domalloc.c,v 1.9 2005/01/07 15:08:32 rolf Exp $
+|   $Id: domalloc.c,v 1.10 2007/08/18 00:33:12 rolf Exp $
 |
 |
 |   A special memory allocator, which uses pre-allocated / bit masked
@@ -33,7 +33,6 @@
 |   October, 2000
 |
 \--------------------------------------------------------------------------*/
-
 
 /*---------------------------------------------------------------------------
 |   Includes
@@ -577,4 +576,3 @@ domFree (
     }
     TDomThreaded(Tcl_MutexUnlock(&binMutex);) /* UNLOCK !*/
 }
-

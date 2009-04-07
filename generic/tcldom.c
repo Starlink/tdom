@@ -2,7 +2,7 @@
 |   Copyright (c) 1999 Jochen Loewer (loewerj@hotmail.com)
 +-----------------------------------------------------------------------------
 |
-|   $Id: tcldom.c,v 1.110 2007/08/12 11:55:25 rolf Exp $
+|   $Id: tcldom.c,v 1.113 2007/12/25 23:19:02 rolf Exp $
 |
 |
 |   A DOM implementation for Tcl using James Clark's expat XML parser
@@ -220,7 +220,6 @@ static char dom_usage[] =
     "    isQName string                                   \n"
     "    isNCName string                                  \n"
     "    isPIName string                                  \n"
-
 ;
 
 static char doc_usage[] =
@@ -470,7 +469,6 @@ void tcldom_docCmdDeleteProc(
     char          *var   = dinfo->traceVarName;
     
     DBG(fprintf(stderr, "--> tcldom_docCmdDeleteProc doc %p\n", doc));
-
     if (var) {
         DBG(fprintf(stderr, "--> tcldom_docCmdDeleteProc calls "
                     "Tcl_UntraceVar for \"%s\"\n", var));
@@ -684,7 +682,8 @@ int tcldom_returnDocumentObj (
     domDocument *document,
     int          setVariable,
     Tcl_Obj     *var_name,
-    int          trace
+    int          trace,
+    int          forOwnerDocument
 )
 {
     char           objCmdName[80], *objVar;
@@ -735,8 +734,10 @@ int tcldom_returnDocumentObj (
             }
         }
     }
-
-    TDomThreaded(tcldom_RegisterDocShared(document));
+    
+    if (!forOwnerDocument) {
+        TDomThreaded(tcldom_RegisterDocShared(document));
+    }
     SetResult(objCmdName);
 
     return TCL_OK;
@@ -753,11 +754,14 @@ tcldom_getElementsByTagName (
     char       *namePattern,
     domNode    *node,
     int         nsIndex,
-    char       *uri
+    const char *uri
 )
 {
-    int      result;
-    domNode *child;
+    int         result;
+    domNode    *child;
+    char        prefix[MAX_PREFIX_LEN], objCmdName[80];
+    const char *localName;
+    Tcl_Obj    *namePtr, *resultPtr;
 
     /* nsIndex == -1 ==> DOM 1 no NS i.e getElementsByTagName
        nsIndex != -1 are the NS aware cases
@@ -783,17 +787,13 @@ tcldom_getElementsByTagName (
                  && (!node->namespace 
                      || strcmp ("", domNamespaceURI (node))==0)) )
         {
-            char prefix[MAX_PREFIX_LEN], *localName;
             if (nsIndex == -1) {
                 localName = node->nodeName;
             } else {
                 domSplitQName(node->nodeName, prefix, &localName);
             }
             if (Tcl_StringMatch(localName, namePattern)) {
-                Tcl_Obj *namePtr;
-                Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
-                char    objCmdName[80];
-            
+                resultPtr = Tcl_GetObjResult(interp);
                 tcldom_createNodeObj(interp, node, objCmdName);
                 namePtr = Tcl_NewStringObj(objCmdName, -1);
                 result = Tcl_ListObjAppendElement(interp, resultPtr, namePtr);
@@ -2403,7 +2403,7 @@ void tcldom_AppendEscaped (
 |
 \---------------------------------------------------------------------------*/
 void tcldom_tolower (
-    char *str,
+    const char *str,
     char *str_out,
     int  len
 )
@@ -2625,7 +2625,8 @@ void tcldom_treeAsXML (
     domNode       *child;
     domDocument   *doc;
     int            first, hasElements, i;
-    char           prefix[MAX_PREFIX_LEN], *localName, *start, *p;
+    char           prefix[MAX_PREFIX_LEN], *start, *p;
+    const char    *localName;
     Tcl_HashEntry *h;
     Tcl_DString    dStr;
 
@@ -2840,11 +2841,11 @@ void tcldom_treeAsXML (
 |   findBaseURI
 |
 \---------------------------------------------------------------------------*/
-char *findBaseURI (
+const char *findBaseURI (
     domNode *node
 )
 {
-    char *baseURI = NULL;
+    const char *baseURI = NULL;
     Tcl_HashEntry *entryPtr;
     domNode       *orgNode;
     
@@ -2853,7 +2854,7 @@ char *findBaseURI (
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry(node->ownerDocument->baseURIs,
                                          (char*)node);
-            baseURI = (char *)Tcl_GetHashValue(entryPtr);
+            baseURI = (const char *)Tcl_GetHashValue(entryPtr);
             break;
         } else {
             node = node->parentNode;
@@ -2864,7 +2865,7 @@ char *findBaseURI (
         if (node->nodeFlags & HAS_BASEURI) {
             entryPtr = Tcl_FindHashEntry(node->ownerDocument->baseURIs,
                                           (char*)node);
-            baseURI = (char *)Tcl_GetHashValue(entryPtr);
+            baseURI = (const char *)Tcl_GetHashValue(entryPtr);
         }
     }
     return baseURI;
@@ -2881,7 +2882,8 @@ static int serializeAsXML (
     Tcl_Obj    *CONST objv[]
 )
 {
-    char          *channelId, prefix[MAX_PREFIX_LEN], *localName;
+    char          *channelId, prefix[MAX_PREFIX_LEN];
+    const char    *localName;
     int            indent, mode, escapeNonASCII = 0, doctypeDeclaration = 0;
     int            optionIndex, cdataChild, escapeAllQuot = 0;
     Tcl_Obj       *resultPtr;
@@ -3481,7 +3483,7 @@ static int applyXSLT (
         Tcl_DecrRefCount(xsltMsgInfo.msgcmd);
     }
     return tcldom_returnDocumentObj(interp, resultDoc, (objc == 2),
-                                     (objc == 2) ? objv[1] : NULL, 1);
+                                     (objc == 2) ? objv[1] : NULL, 1, 0);
             
  applyXSLTCleanUP:
     if (localListPtr) {
@@ -3614,8 +3616,9 @@ int tcldom_NodeObjCmd (
     domAttrNode *attrs;
     domException exception;
     char         tmp[200], objCmdName[80], prefix[MAX_PREFIX_LEN],
-                *method, *nodeName, *str, *localName,
-                *attr_name, *attr_val, *filter, *errMsg, *uri;
+                *method, *nodeName, *str, *attr_name, *attr_val, *filter,
+                *errMsg;
+    const char  *localName, *uri, *nsStr;
     int          result, length, methodIndex, i, line, column;
     int          nsIndex, bool, hnew;
     Tcl_Obj     *namePtr, *resultPtr;
@@ -4042,8 +4045,8 @@ int tcldom_NodeObjCmd (
             localName = Tcl_GetString(objv[3]);
             attrs = node->firstAttr;
             while (attrs) {
-                domSplitQName(attrs->nodeName, prefix, &str);
-                if (!strcmp(localName,str)) {
+                domSplitQName(attrs->nodeName, prefix, &nsStr);
+                if (!strcmp(localName,nsStr)) {
                     ns = domGetNamespaceByIndex(node->ownerDocument, 
                                                 attrs->namespace);
                     if (ns && !strcmp(ns->uri, uri)) {
@@ -4418,9 +4421,9 @@ int tcldom_NodeObjCmd (
 
         case m_prefix:
             CheckArgs(2,2,2,"");
-            str = domNamespacePrefix(node);
-            if (str) {
-                SetResult(str);
+            nsStr = domNamespacePrefix(node);
+            if (nsStr) {
+                SetResult(nsStr);
             } else {
                 SetResult("");
             }
@@ -4428,9 +4431,9 @@ int tcldom_NodeObjCmd (
 
         case m_namespaceURI:
             CheckArgs(2,2,2,"");
-            str = domNamespaceURI(node);
-            if (str) {
-                SetResult(str);
+            nsStr = domNamespaceURI(node);
+            if (nsStr) {
+                SetResult(nsStr);
             } else {
                 SetResult("");
             }
@@ -4451,7 +4454,8 @@ int tcldom_NodeObjCmd (
             CheckArgs(2,3,2,"?docObjVar?");
             return tcldom_returnDocumentObj(interp, node->ownerDocument,
                                             (objc == 3),
-                                            (objc == 3) ? objv[2] : NULL, 0);
+                                            (objc == 3) ? objv[2] : NULL, 0, 
+                                            1);
         case m_target:
             CheckArgs(2,2,2,"");
             if (node->nodeType != PROCESSING_INSTRUCTION_NODE) {
@@ -4529,11 +4533,11 @@ int tcldom_NodeObjCmd (
                 node->nodeFlags |= HAS_BASEURI;
                 SetResult (Tcl_GetString (objv[2]));
             } else {
-                str = findBaseURI(node);
-                if (!str) {
+                nsStr = findBaseURI(node);
+                if (!nsStr) {
                     SetResult("");
                 } else {
-                    SetResult(str);
+                    SetResult(nsStr);
                 }
             }
             break;
@@ -5196,7 +5200,8 @@ int tcldom_createDocument (
         return TCL_ERROR;
     }
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1,
+                                    0);
 }
 
 /*----------------------------------------------------------------------------
@@ -5225,7 +5230,8 @@ int tcldom_createDocumentNode (
 
     doc = domCreateDoc(NULL, 0);
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1,
+                                    0);
 }
 
 /*----------------------------------------------------------------------------
@@ -5258,7 +5264,8 @@ int tcldom_createDocumentNS (
         return TCL_ERROR;
     }
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1,
+                                    0);
 }
 
 
@@ -5564,7 +5571,8 @@ int tcldom_parse (
             }
             return TCL_ERROR;
         }
-        return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName,1);
+        return tcldom_returnDocumentObj (interp, doc, setVariable, newObjName,
+                                         1, 0);
     }
 
 #ifdef TDOM_NO_EXPAT
@@ -5628,7 +5636,8 @@ int tcldom_parse (
     }
     XML_ParserFree(parser);
 
-    return tcldom_returnDocumentObj(interp, doc, setVariable, newObjName, 1);
+    return tcldom_returnDocumentObj (interp, doc, setVariable, newObjName, 1,
+                                     0);
 #endif
 
 }
@@ -5755,7 +5764,8 @@ int tcldom_DomObjCmd (
                     return TCL_ERROR;
                 }
                 return tcldom_returnDocumentObj(interp, doc, (objc == 4),
-                                                (objc==4) ? objv[3] : NULL, 1);
+                                                (objc==4) ? objv[3] : NULL,
+                                                1, 0);
             }
             break;
         case m_detachDocument:

@@ -2,7 +2,7 @@
 |   Copyright (c) 1999-2001 Jochen Loewer (loewerj@hotmail.com)
 |-----------------------------------------------------------------------------
 |
-|   $Id: domxpath.c,v 1.94 2007/08/05 17:52:35 rolf Exp $
+|   $Id: domxpath.c,v 1.96 2007/08/23 16:33:36 rolf Exp $
 |
 |
 |   A XPath implementation (lexer/parser/evaluator) for tDOM,
@@ -365,7 +365,7 @@ void rsSetBool ( xpathResultSet *rs, int i) {
     rs->type = BoolResult;
     rs->intvalue = (i ? 1 : 0);
 }
-void rsSetString ( xpathResultSet *rs, char *s) {
+void rsSetString ( xpathResultSet *rs, const char *s) {
 
     rs->type = StringResult;
     if (s) {
@@ -433,7 +433,7 @@ void rsAddNode ( xpathResultSet *rs, domNode *node) {
 void rsAddNodeFast ( xpathResultSet *rs, domNode *node) {
 
     if ((rs->type != EmptyResult) && (rs->type != xNodeSetResult)) {
-        fprintf(stderr, "could not add node to non NodeSetResult xpathResultSet!"); return;
+        domPanic("Can not add node to non NodeSetResult xpathResultSet!");
     }
     if (rs->type == EmptyResult) {
 
@@ -677,7 +677,8 @@ static XPathTokens xpathLexer (
 {
     int  l, allocated;
     int  i, k, start, offset;
-    char delim, *ps, save, *uri, tmpErr[80];
+    char delim, *ps, save, tmpErr[80];
+    const char *uri;
     XPathTokens tokens;
     int token = EOS;
 
@@ -1381,6 +1382,10 @@ Production(UnaryExpr)
     if (LA==MINUS) {
         Consume(MINUS);
         a = Recurse(UnionExpr);
+        if (!a) {
+            if (*errMsg == NULL) { ErrExpected("UnionExpr"); }
+            return NULL;
+        }
         if ((a->type == Int) && (a->next == NULL)) {
             a->intvalue = a->intvalue * -1;
         } else
@@ -1527,7 +1532,6 @@ EndProduction
 Production(Predicate)
 
     Consume(LBRACKET);
-    /*a = Recurse(PredicateExpr);*/
     a = Recurse(OrExpr);
     Consume(RBRACKET);
 
@@ -1576,6 +1580,7 @@ static int IsStepPredOptimizable (ast a) {
     ast b;
     int left;
     
+    /* Must be called with a != NULL */
     DBG (
         fprintf (stderr, "IsStepPredOptimizable:\n");
         printAst (0,a);
@@ -1585,6 +1590,7 @@ static int IsStepPredOptimizable (ast a) {
     case Less:
     case LessOrEq:
         b = a->child;
+        if (!b) return 0;
         if (b->type != ExecFunction 
             || b->intvalue != f_position) return 0;
         b = b->next;
@@ -1594,6 +1600,7 @@ static int IsStepPredOptimizable (ast a) {
     case Greater:
     case GreaterOrEq:
         b = a->child;
+        if (!b) return 0;
         if (b->type != Int) return 0;
         left = b->intvalue;
         b = b->next;
@@ -1603,6 +1610,7 @@ static int IsStepPredOptimizable (ast a) {
         else                    return left + 1;
     case Equal:
         b = a->child;
+        if (!b) return 0;
         if (b->type == Int
             && b->next->type == ExecFunction
             && b->next->intvalue == f_position) return b->intvalue;
@@ -1630,13 +1638,17 @@ Production(Step)
         ast b;
         int isFirst = 1;
         a = Recurse(Basis);
+        if (LA==LBRACKET && !a) {
+            if (*errMsg == NULL) { ErrExpected("Step"); }
+            return NULL;
+        }
         while (LA==LBRACKET) {
             b = Recurse (Predicate);
             if (!b) return NULL;
             if (isFirst) {
                 a->intvalue = IsStepPredOptimizable (b);
                 DBG (fprintf (stderr, "step type %s, intvalue: %d\n", astType2str[a->type], a->intvalue);)
-                isFirst = 0;
+                    isFirst = 0;
             }
             Append( a, New1WithEvalSteps( Pred, b));
         }
@@ -1651,6 +1663,7 @@ EndProduction
 Production(RelativeLocationPath)
 
     a = Recurse(Step);
+    if (!a) return NULL;
     while ((LA==SLASH) || (LA==SLASHSLASH)) {
         if (LA==SLASH) {
             Consume(SLASH);
@@ -1744,6 +1757,7 @@ static int usesPositionInformation ( ast a) {
     return 0;
 }
 
+/* Must be called with a != NULL */
 static int checkStepPatternPredOptimizability ( ast a , int *max) {
     ast b;
 
@@ -1781,7 +1795,8 @@ static int checkStepPatternPredOptimizability ( ast a , int *max) {
         case Less:
         case LessOrEq:
             b = a->child;
-            if (b->type == ExecFunction
+            if (b
+                && b->type == ExecFunction
                 && b->intvalue == f_position
                 && b->next->type == Int) {
                 if (a->type == Less) *max = b->next->intvalue;
@@ -1793,7 +1808,8 @@ static int checkStepPatternPredOptimizability ( ast a , int *max) {
         case Greater:
         case GreaterOrEq:
             b = a->child;
-            if (b->type == Int 
+            if (b
+                && b->type == Int 
                 && b->next->type == ExecFunction
                 && b->next->intvalue == f_position) {
                 if (a->type == Greater) *max = b->intvalue;
@@ -1804,13 +1820,15 @@ static int checkStepPatternPredOptimizability ( ast a , int *max) {
             return 1;            
         case Equal:
             b = a->child;
-            if (b->type == Int
+            if (b
+                && b->type == Int
                 && b->next->type == ExecFunction
                 && b->next->intvalue == f_position) {
                 *max = b->intvalue;
                 return 0;
             }
-            if (b->type == ExecFunction 
+            if (b
+                && b->type == ExecFunction 
                 && b->intvalue == f_position
                 && b->next->type == Int) {
                 *max = b->next->intvalue;
@@ -1835,6 +1853,7 @@ static int checkStepPatternPredOptimizability ( ast a , int *max) {
     return 1;
 }
 
+/* Must be called with a != NULL */
 static int IsStepPatternPredOptimizable ( ast a, int *max ) {
     int f;
 
@@ -1886,8 +1905,12 @@ Production(StepPattern)
     } else {
         a = Recurse(NodeTest);
     }
+    if (!a) {
+        if (*errMsg == NULL) { ErrExpected("StepPattern") }; 
+        return NULL;
+    }
     {
-        ast b, c;
+        ast b = NULL, c = NULL, aCopy = NULL;
         int stepIsOptimizable = 1, isFirst = 1, max, savedmax;
         while (LA==LBRACKET) {
             b = Recurse (Predicate);
@@ -1909,7 +1932,7 @@ Production(StepPattern)
                 Append (a, New (FillWithCurrentNode));
             } else {
                 /* copy the step before the Predicate */
-                ast aCopy = NEWCONS;
+                aCopy = NEWCONS;
                 aCopy->type      = a->type;
                 aCopy->next      = NULL;
                 if (a->strvalue) aCopy->strvalue = tdomstrdup(a->strvalue);
@@ -2020,8 +2043,10 @@ Production(LocationPathPattern)
             a = New(IsRoot);
         } else {
             a = Recurse(RelativePathPattern);
-            Append( a, New(ToParent) );
-            Append( a, New(IsRoot) );
+            if (a) {
+                Append( a, New(ToParent) );
+                Append( a, New(IsRoot) );
+            }
         }
     } else
     if ((LA==FUNCTION)
@@ -2034,12 +2059,12 @@ Production(LocationPathPattern)
         if (LA==SLASH) {
             Consume(SLASH);
             a = Recurse(RelativePathPattern);
-            Append( a, New(ToParent) );
+            if (a) { Append( a, New(ToParent) ); }
         } else
         if (LA==SLASHSLASH) {
             Consume(SLASHSLASH);
             a = Recurse(RelativePathPattern);
-            Append( a, New(ToAncestors) );
+            if (a) { Append( a, New(ToAncestors) ); }
         }
         if (!a) {
             a = b;
@@ -2050,8 +2075,10 @@ Production(LocationPathPattern)
         if (LA==SLASHSLASH) {
             Consume(SLASHSLASH);
             a = Recurse(RelativePathPattern);
-            Append( a, New(ToAncestors) );
-            Append( a, New(IsRoot) );
+            if (a) {
+                Append( a, New(ToAncestors) );
+                Append( a, New(IsRoot) );
+            }
         } else {
             a = Recurse(RelativePathPattern);
         }
@@ -2109,7 +2136,7 @@ int xpathParsePostProcess (
     char        **errMsg
     )
 {
-    char *uri;
+    const char *uri;
     
     DBG(
         fprintf(stderr, "xpathParsePostProcess start:\n");
@@ -2296,7 +2323,7 @@ int xpathNodeTest (
     ast             step
 )
 {
-    char   *localName, *nodeUri;
+    const char *localName, *nodeUri;
 
     if (!(step->child)) return 1;
     if (step->child->type == IsElement) {
@@ -2829,6 +2856,7 @@ xpathEvalFunction (
     int              left = 0, useFastAdd;
     double           dRight = 0.0;
     char            *leftStr = NULL, *rightStr = NULL;
+    const char      *str;
     Tcl_DString      dStr;
 #if TclOnly8Bits
     char            *fStr;
@@ -3650,11 +3678,11 @@ xpathEvalFunction (
                 }
             } else
             if (leftResult.nodes[0]->nodeType == ATTRIBUTE_NODE) {
-                leftStr = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
-                if (leftStr[0] == 'x' && strcmp(leftStr, "xmlns")==0) {
+                str = domGetLocalName(((domAttrNode*)leftResult.nodes[0])->nodeName);
+                if (str[0] == 'x' && strcmp(str, "xmlns")==0) {
                     rsSetString (result, "");
                 } else {
-                    rsSetString (result, leftStr);
+                    rsSetString (result, str);
                 }
             } else
             if (leftResult.nodes[0]->nodeType == PROCESSING_INSTRUCTION_NODE) {
@@ -3834,11 +3862,11 @@ static int xpathEvalStep (
         child = ctxNode->firstChild;
         if (step->intvalue) {
             while (child && (count < step->intvalue)) {
-                DBG(fprintf(stderr, "AxisChild: child '%s' domNode0x%x \n", 
+                DBG(fprintf(stderr, "AxisChild: child '%s' domNode%p \n", 
                             child->nodeName, child);)
                 if (xpathNodeTest(child, step)) {
                     DBG(fprintf(stderr, 
-                      "AxisChild: after node taking child '%s' domNode0x%x \n",
+                      "AxisChild: after node taking child '%s' domNode%p \n",
                                 child->nodeName, child);)
                     rsAddNodeFast( result, child);
                     count++;
@@ -3847,11 +3875,11 @@ static int xpathEvalStep (
             }
         } else {
             while (child) {
-                DBG(fprintf(stderr, "AxisChild: child '%s' domNode0x%x \n",
+                DBG(fprintf(stderr, "AxisChild: child '%s' domNode%p \n",
                             child->nodeName, child);)
                 if (xpathNodeTest(child, step)) {
                     DBG(fprintf(stderr,
-                      "AxisChild: after node taking child '%s' domNode0x%x \n",
+                      "AxisChild: after node taking child '%s' domNode%p \n",
                                 child->nodeName, child);)
                     rsAddNodeFast( result, child);
                 }
@@ -5258,7 +5286,7 @@ int xpathMatches (
     ast             childSteps;
     int             rc, i, j, currentPos = 0, nodeMatches, docOrder = 1;
     int             useFastAdd;
-    char           *localName = NULL, *nodeUri;
+    const char     *localName = NULL, *nodeUri;
     domAttrNode    *attr;
     domNode        *child;
 

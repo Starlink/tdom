@@ -799,10 +799,12 @@ domNS* domNewNamespace (
     ns = domLookupNamespace (doc, prefix, namespaceURI);
     if (ns != NULL) return ns;
     doc->nsptr++;
-    if (doc->nsptr > 1024) {
+    /* PWD: try living without a limit
+    if (doc->nsptr > 254) {
         DBG(fprintf (stderr, "maximum number of namespaces exceeded!!!\n");)
         domPanic("domNewNamespace: maximum number of namespaces exceeded!");
     }
+    */
     if (doc->nsptr >= doc->nslen) {
         doc->namespaces = (domNS**) REALLOC ((char*) doc->namespaces,
                                              sizeof (domNS*) * 2 * doc->nslen);

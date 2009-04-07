@@ -2,7 +2,7 @@
 |   Copyright (C) 1999  Jochen C. Loewer (loewerj@hotmail.com)
 +----------------------------------------------------------------------------
 |
-|   $Id: dom.h,v 1.52 2007/08/08 15:52:38 rolf Exp $
+|   $Id: dom.h,v 1.54 2007/08/18 12:51:46 rolf Exp $
 |
 |
 |   A DOM interface upon the expat XML parser for the C language
@@ -545,9 +545,9 @@ typedef struct _domlock {
 \-------------------------------------------------------------------------*/
 typedef struct domNS {
 
-   char         *uri;
-   char         *prefix;
-   int           index;
+   char   *uri;
+   char   *prefix;
+   int     index;
 
 } domNS;
 
@@ -682,14 +682,13 @@ typedef void (*domFreeCallback) (domNode * node, void * clientData);
 |   Function prototypes
 |
 \-------------------------------------------------------------------------*/
-char *         domException2String (domException expection);
+const char *   domException2String (domException expection);
 
 
 void           domModuleInitialize (void);
-domDocument *  domCreateDoc (char *baseURI, int storeLineColumn);
-domDocument *  domCreateDocument (Tcl_Interp *interp,
-                                  char *documentElementTagName,
-                                  char *uri);
+domDocument *  domCreateDoc (const char *baseURI, int storeLineColumn);
+domDocument *  domCreateDocument (Tcl_Interp *interp, const char *uri,
+                                  char *documentElementTagName);
 void           domSetDocumentElement (domDocument *doc);
 
 domDocument *  domReadDocument   (XML_Parser parser,
@@ -700,7 +699,7 @@ domDocument *  domReadDocument   (XML_Parser parser,
                                   int   storeLineColumn,
                                   int   feedbackAfter,
                                   Tcl_Channel channel,
-                                  char *baseurl,
+                                  const char *baseurl,
                                   char *extResolver,
                                   int   useForeignDTD,
                                   int   paramEntityParsing,
@@ -716,62 +715,68 @@ void           domFreeNode       (domNode *node,
                                   int dontfree);
 
 domTextNode *  domNewTextNode    (domDocument *doc,
-                                  char        *value,
+                                  const char  *value,
                                   int          length,
                                   domNodeType  nodeType);
 
 domNode *      domNewElementNode (domDocument *doc,
-                                  char        *tagName,
+                                  const char  *tagName,
                                   domNodeType  nodeType);
 		
 domNode *      domNewElementNodeNS (domDocument *doc,
-                                    char        *tagName,
-                                    char        *uri,
+                                    const char  *tagName,
+                                    const char  *uri,
                                     domNodeType  nodeType);
 
 domProcessingInstructionNode * domNewProcessingInstructionNode (
                                   domDocument *doc,
-                                  char        *targetValue,
+                                  const char  *targetValue,
                                   int          targetLength,
-                                  char        *dataValue,
+                                  const char  *dataValue,
                                   int          dataLength);
 
-domAttrNode *  domSetAttribute (domNode *node, char *attributeName,
-                                               char *attributeValue);
+domAttrNode *  domSetAttribute (domNode *node, const char *attributeName,
+                                               const char *attributeValue);
 
-domAttrNode *  domSetAttributeNS (domNode *node, char *attributeName,
-                                                 char *attributeValue,
-                                                 char *uri,
+domAttrNode *  domSetAttributeNS (domNode *node, const char *attributeName,
+                                                 const char *attributeValue,
+                                                 const char *uri,
                                                  int   createNSIfNeeded);
-domAttrNode *  domGetAttributeNodeNS (domNode *node, char *uri, 
-                                                     char *localname);
+domAttrNode *  domGetAttributeNodeNS (domNode *node, const char *uri, 
+                                                     const char *localname);
 
-int            domRemoveAttribute (domNode *node, char *attributeName);
-int            domRemoveAttributeNS (domNode *node, char *uri, char *localName);
+int            domRemoveAttribute (domNode *node, const char *attributeName);
+int            domRemoveAttributeNS (domNode *node, const char *uri,
+                                     const char *localName);
 domNode *      domPreviousSibling (domNode *attr);
 domException   domDeleteNode   (domNode *node, domFreeCallback freeCB, void *clientData);
 domException   domRemoveChild  (domNode *node, domNode *childToRemove);
 domException   domAppendChild  (domNode *node, domNode *childToAppend);
 domException   domInsertBefore (domNode *node, domNode *childToInsert, domNode *refChild);
 domException   domReplaceChild (domNode *node, domNode *newChild, domNode *oldChild);
-domException   domSetNodeValue (domNode *node, char *nodeValue, int valueLen);
+domException   domSetNodeValue (domNode *node, const char *nodeValue,
+                                int valueLen);
 domNode *      domCloneNode (domNode *node, int deep);
 
 domTextNode *  domAppendNewTextNode (domNode *parent, char *value, int length, domNodeType nodeType, int disableOutputEscaping);
-domNode *      domAppendNewElementNode (domNode *parent, char *tagName, char *uri);
+domNode *      domAppendNewElementNode (domNode *parent, const char *tagName,
+                                        const char *uri);
 domNode *      domAppendLiteralNode (domNode *parent, domNode *node);
 domNS *        domAddNSToNode (domNode *node, domNS *nsToAdd);
-char *         domNamespacePrefix (domNode *node);
-char *         domNamespaceURI    (domNode *node);
-char *         domGetLocalName    (char *nodeName);
-int            domSplitQName (char *name, char *prefix, char **localName);
-domNS *        domLookupNamespace (domDocument *doc, char *prefix, char *namespaceURI);
-domNS *        domLookupPrefix  (domNode *node, char *prefix);
-char *         domLookupPrefixWithMappings (domNode *node, char *prefix,
+const char *   domNamespacePrefix (domNode *node);
+const char *   domNamespaceURI    (domNode *node);
+const char *   domGetLocalName    (const char *nodeName);
+int            domSplitQName (const char *name, char *prefix,
+                              const char **localName);
+domNS *        domLookupNamespace (domDocument *doc, const char *prefix, 
+                                   const char *namespaceURI);
+domNS *        domLookupPrefix  (domNode *node, const char *prefix);
+const char *   domLookupPrefixWithMappings (domNode *node, const char *prefix,
                                             char **prefixMappings);
 domNS *        domLookupURI     (domNode *node, char *uri);
 domNS *        domGetNamespaceByIndex (domDocument *doc, int nsIndex);
-domNS *        domNewNamespace (domDocument *doc, char *prefix, char *namespaceURI);
+domNS *        domNewNamespace (domDocument *doc, const char *prefix,
+                                const char *namespaceURI);
 int            domGetLineColumn (domNode *node, int *line, int *column);
 
 int            domXPointerChild (domNode * node, int all, int instance, domNodeType type,
@@ -794,17 +799,17 @@ int            domXPointerXSibling (domNode * node, int forward_mode, int all, i
                                     char *attrValue, int attrLen,
                                     domAddCallback addCallback, void * clientData);
 
-char *         findBaseURI (domNode *node);
+const char *   findBaseURI (domNode *node);
 
-void           tcldom_tolower (char *str, char *str_out, int  len);
-int            domIsNAME (char *name);
-int            domIsPINAME (char *name);
-int            domIsQNAME (char *name);
-int            domIsNCNAME (char *name);
-int            domIsChar (char *str);
-int            domIsComment (char *str);
-int            domIsCDATA (char *str);
-int            domIsPIValue (char *str);
+void           tcldom_tolower (const char *str, char *str_out, int  len);
+int            domIsNAME (const char *name);
+int            domIsPINAME (const char *name);
+int            domIsQNAME (const char *name);
+int            domIsNCNAME (const char *name);
+int            domIsChar (const char *str);
+int            domIsComment (const char *str);
+int            domIsCDATA (const char *str);
+int            domIsPIValue (const char *str);
 void           domCopyTo (domNode *node, domNode *parent, int copyNS);
 void           domCopyNS (domNode *from, domNode *to);
 domAttrNode *  domCreateXMLNamespaceNode (domNode *parent);

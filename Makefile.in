@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.25 2007/03/02 23:43:53 rolf Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.26 2008/08/27 11:39:36 rolf Exp $
 
 #========================================================================
 # Add additional lines to handle any additional AC_SUBST cases that
@@ -306,7 +306,7 @@ VPATH = $(srcdir):$(srcdir)/expat:$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 #========================================================================
 
 pkgIndex.tcl-hand:
-	@(echo 'package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION)\
+	@(echo 'package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION) \
 	"load [list [file join $$dir $(PKG_LIB_FILE)]];\
          source [list [file join $$dir tdom.tcl]]"'\
 	) > pkgIndex.tcl

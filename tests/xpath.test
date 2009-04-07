@@ -15,7 +15,7 @@
 #
 # Copyright (c) 2002 - 2007 Rolf Ade.
 #
-# RCS: @(#) $Id: xpath.test,v 1.23 2007/08/05 01:16:41 rolf Exp $
+# RCS: @(#) $Id: xpath.test,v 1.24 2007/08/23 16:34:19 rolf Exp $
 
 source [file join [file dir [info script]] loadtdom.tcl]
 
@@ -705,6 +705,20 @@ test xpath-5.25 {tcl var resolution in expr} {
     $doc delete
     set result
 } {4.0}
+
+test xpath-5.26 {erroneous XPath expr} {
+    set doc [dom createDocument doc]
+    set result [catch {$doc selectNodes {/[position()=1]}}]
+    $doc delete
+    set result
+} {1}
+
+test xpath-5.27 {erroneous XPath expr} {
+    set doc [dom parse {<!--yes-->  <doc><e1/></doc><?foo bar?>}]
+    set result [catch {$doc selectNodes {/[position()=1]}} errMsg]
+    $doc delete
+    set result
+} {1}
 
 set doc [dom parse {
 <root>

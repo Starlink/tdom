@@ -1,3 +1,132 @@
+2008-08-27  Rolf Ade  <rolf@pointsman.de>
+
+        * Makefile.in: Added missing space in target
+          pkgIndex.tcl-hand. Thanks to Gustaf Neumann for reporting
+          the problem and providing a fix.
+
+2008-05-25  Rolf Ade  <rolf@pointsman.de>
+
+        * lib/tdom.tcl: The XPath function element-available() should,
+          according to the rec, return true "if and only if the
+          <argument> is the name of an instruction". That is, not for
+          all known XSLT elements.
+
+2008-03-04  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/tclexpat.c: Editorial changes.
+
+        * generic/domhtml.c: 
+        * generic/domxslt.c: Added a few casts, to pacify picky
+          compliers.
+
+2007-12-26  Rolf Ade  <rolf@pointsman.de>
+        
+        * generic/dom.c
+        * generic/tcldom.c: Fixed a memory leak in case of
+          --enable-threads.
+
+2007-10-30  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domhtml.c: 
+        * tests/htmlreader.test: ID Attributes in HTML documents
+          parsed with -html do now what you expect: you find it with
+          getElementById.
+
+2007-10-29  Rolf Ade  <rolf@pointsman.de>
+
+        * doc/domNode.*
+        * doc/domDoc.*: Fixed documentation error in the documentation
+          of the replaceChild method.
+
+2007-10-08  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domhtml.c
+        * tests/htmlreader.test: Fixed handling of attributes without
+          value. Now, an attribute without value gets the attribute
+          name as value.
+
+2007-10-04  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/domDoc.test: Fixed test domDoc-1.2: Test was broken in
+          case of locale != ISO-8859-1 (or -15).
+
+2007-10-03  Rolf Ade  <rolf@pointsman.de>
+
+        * win/makefile.vc: makefile.vc generated a pkgIndex.tcl file,
+          that didn't work in case of spaces in the install
+          path. Thanks to Koen Danckaert.
+
+2007-09-28  Rolf Ade  <rolf@pointsman.de>
+
+        * tests/all-bench.tcl
+        * tests/domNode.bench
+        * tests/xpath.bench: Added this files: Start of a benchmark
+          suite.
+
+2007-09-25  Rolf Ade  <rolf@pointsman.de>
+        
+        * win/makefile.vc
+        * win/nmakehlp.c
+        * win/rules.vc
+        * win/tdom.rc: Updated. (Thanks to Pat Thoyts.)
+
+        * tdom.m4
+        * extensions/tnc/configure: Fixes tnc building against
+          uninstalled tdom. (Thanks to Daniel A. Steffen.)
+
+2007-08-23  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxpath.c
+        * tests/dom.test
+        * tests/xmlsimple.test
+        * tests/xpath.test
+        * tests/xslt.test: Fixed bug triggered by invalid XSLT XPath
+          pattern (normal XPath expr (via selectNodes) wasn't
+          infected). Checked the code for similar spots and fixed a
+          few. Replaced a fprintf(stderr, ..) called in an
+          'impossible' case with a more appropriate domPanic call.
+
+2007-08-18  Rolf Ade  <rolf@pointsman.de>
+
+        * generic/domxslt.c: Code cleanup in document()
+          implementation.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domxslt.c
+        * generic/tcldom.c: More constification and clean up.
+
+        * generic/dom.c
+        * generic/dom.h
+        * generic/domalloc.c
+        * generic/domxpath.c
+        * generic/domxpath.h
+        * generic/domxslt.c
+        * generic/tcldom.c
+        * generic/xmlsimple.c: Big const ification.
+
+2007-08-15  Rolf Ade  <rolf@pointsman.de>
+        
+        * configure
+        * configure.in
+        * unix/CONFIG
+        * tdom.m4: New default build: --disable-tdomalloc.
+
+        * CHANGES: Updated.
+
+        * README
+        * README.AOL
+        * configure
+        * configure-tcl8.0.5
+        * configure.in
+        * tests/loadtdom.tcl
+        * mac/Prefix/tDOMPrefix.h
+        * mac/Prefix/tDOMPrefix_OSX.h
+        * win/makefile.vc
+        * win/makefile805.vc:
+        * win/pkgIndex.tcl: Bumped version to 0.8.3.
+
+--- Release 0.8.2, 14. Aug. 2007 ---
 
 2007-08-13  Rolf Ade  <rolf@pointsman.de>
 

@@ -1293,11 +1293,10 @@ HTML_SimpleParse (
                     }
                 } else {
                     /* attribute without value, like 'nowrap' */
-                    x++;
                     saved = *(ArgName + nArgName);
                     *(ArgName + nArgName) = '\0'; /* terminate arg name */
-                    ArgVal = "1"; /* current hack */
-                    nArgVal = 1;                
+                    ArgVal = ArgName;
+                    nArgVal = nArgName;
                 }
 
                 /*--------------------------------------------------
@@ -1316,7 +1315,23 @@ HTML_SimpleParse (
                 memmove(attrnode->nodeValue, ArgVal, nArgVal);
                 *(attrnode->nodeValue + nArgVal) = 0;
                 if (ampersandSeen) {
-                    TranslateEntityRefs(attrnode->nodeValue, &(attrnode->valueLength) );
+                    TranslateEntityRefs(attrnode->nodeValue, 
+                                        &(attrnode->valueLength) );
+                }
+                if (!strcmp(ArgName, "id")) {
+                    if (!doc->ids) {
+                        doc->ids = 
+                            (Tcl_HashTable *) MALLOC (sizeof (Tcl_HashTable));
+                        Tcl_InitHashTable (doc->ids, TCL_STRING_KEYS);
+                    }
+                    h = Tcl_CreateHashEntry (doc->ids, attrnode->nodeValue,
+                                             &hnew);
+                    /* How to resolve in case of dublicates?  We
+                       follow, what the core dom building code does:
+                       the first value in document order wins. */
+                    if (hnew) {
+                        Tcl_SetHashValue (h, node);
+                    }
                 }
                 if (node->firstAttr) {
                     lastAttr->nextSibling = attrnode;

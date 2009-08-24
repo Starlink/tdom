@@ -157,6 +157,14 @@
 #define DOM_CREATECMDMODE_CMDS 1
 #define DOM_CREATECMDMODE_TOKENS 2
 
+/*
+ * Macro access to the interp errorLine member. Access to this removed
+ * in Tcl 8.6.
+ */
+#if TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION < 6
+#define Tcl_GetErrorLine(interp) (interp->errorLine)
+#endif
+
 /*----------------------------------------------------------------------------
 |   Module Globals
 |

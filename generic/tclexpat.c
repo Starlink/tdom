@@ -44,9 +44,7 @@
 #include <io.h>
 #endif
 
-#ifdef _POSIX_SOURCE
 #include <unistd.h>
-#endif
 
 /* Used internal als status, like TCL_OK, TCL_ERROR etc.  As a
    consequent, application specific error codes must be at least
